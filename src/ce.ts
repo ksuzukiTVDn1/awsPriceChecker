@@ -1,5 +1,4 @@
 import moment from 'moment';
-import { double } from 'aws-sdk/clients/storagegateway';
 
 export class CERequester {
   private ce: AWS.CostExplorer;
@@ -22,37 +21,37 @@ export class CERequester {
         "Type": "DIMENSION"
       }]
     };
-
+  
     this.ce.getCostAndUsage(params, (err: any , data: any) => {
       if (err) {
         console.log(err, err.stack);
       } else {
         var attachments: any[] = [];
-        var cost: double = 0;
+        var cost: number = 0.0;
 
         for (const result of data.ResultsByTime) {
+          const fields: any[] = [];
           for (const service of result.Groups) {
             const today = moment().format("DD");
             const lastDay = moment().endOf('month').format("DD");
             cost += parseFloat(service.Metrics.BlendedCost.Amount);
 
-            const fields = {
-              "color": "#B2B228",
-              "fields": [{
-                "title": "サービス",
-                "value": service.Keys[0],
-                "short": true
-              }, {
-                "title": "料金",
-                "value": service.Metrics.BlendedCost.Amount + service.Metrics.BlendedCost.Unit,
-                "short": true
-              }]
+            const field_tmp = {
+              'title': service.Keys[0],
+              'value': service.Metrics.BlendedCost.Amount + service.Metrics.BlendedCost.Unit,
+              'short': true
             };
-            attachments.push(fields);
+            fields.push(field_tmp);
           }
+
+          const attach_tmp = {
+            "color": "#B2B228",
+            "fields": fields
+          };
+          attachments.push(attach_tmp);
         }
 
-        const fields = {
+        const total = {
           "color": "#B2B228",
           "fields": [{
             "title": "合計",
@@ -60,8 +59,7 @@ export class CERequester {
             "short": false
           }]
         };
-        attachments.push(fields);
-
+        attachments.push(total);
         slack_ctx.send(attachments);
       }
     });
